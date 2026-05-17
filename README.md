@@ -9,33 +9,50 @@ Supports only x86_64 and arm64 Linux.
 Installation methods:
 
 - [Docker](#docker) (recommended)
-- Prebuilt binaries (from [releases](https://github.com/WorldObservationLog/wrapper/releases) or [actions](https://github.com/WorldObservationLog/wrapper/actions))
+- Prebuilt binaries (from [releases](https://github.com/PandoRunRun/wrapper/releases) or [actions](https://github.com/PandoRunRun/wrapper/actions))
 - [Build from source](#build-from-source)
 
 ### Docker
 
-Available for x86_64 and arm64. Need to download prebuilt version from releases or actions.
+You can easily build the Docker image locally and run it.
 
-1. Build image:
+1. Clone the repository (Important: must include submodules):
 
+```bash
+git clone --recursive https://github.com/PandoRunRun/wrapper.git
+cd wrapper
 ```
-docker build --tag ghcr.io/worldobservationlog/wrapper:local .
-```
+*(If you already cloned it without submodules, run `git submodule update --init --recursive`)*
 
-2. Login:
+2. Build the image:
 
-```
-docker run --privileged --rm -it -v ./rootfs/data:/app/rootfs/data --entrypoint ./wrapper ghcr.io/worldobservationlog/wrapper:local -L "username:password" -H 0.0.0.0
-```
-
-Quit after this (using Ctrl-C).
-
-3. Run:
-
-```
-docker run --privileged -v ./rootfs/data:/app/rootfs/data -p 10020:10020 -p 20020:20020 -p 30020:30020 -e args="-H 0.0.0.0" ghcr.io/worldobservationlog/wrapper:local
+```bash
+docker build --tag wrapper:local .
 ```
 
+3. Login to your Apple Music account:
+
+```bash
+docker run --privileged --rm -it -v ./rootfs/data:/app/rootfs/data --entrypoint ./wrapper wrapper:local -L "username:password" -H 0.0.0.0
+```
+
+Wait until you see `[+] account info cached successfully`, then quit (using `Ctrl-C`).
+
+4. Run the wrapper daemon:
+
+```bash
+docker run -d \
+  --name am-wrapper \
+  --restart=always \
+  --privileged \
+  -v ./rootfs/data:/app/rootfs/data \
+  -p 10020:10020 \
+  -p 20020:20020 \
+  -p 30020:30020 \
+  -e args="-H 0.0.0.0" \
+  wrapper:local
+```
+*(Note: `--restart=always` is recommended. If the Playback Lease expires, the container will automatically restart and re-establish the connection.)*
 
 ### Build from source
 
