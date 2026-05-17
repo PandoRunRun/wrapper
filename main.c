@@ -581,6 +581,11 @@ inline static int new_socket() {
             return EXIT_FAILURE;
         }
 
+        struct timeval tv;
+        tv.tv_sec = 30; // 30 seconds timeout
+        tv.tv_usec = 0;
+        setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
         if (!handle_cpp(connfd)) {
             uint8_t autom = 1;
             _ZN22SVPlaybackLeaseManager12requestLeaseERKb(leaseMgr, &autom);
@@ -696,9 +701,15 @@ void handle_m3u8(const int connfd) {
             m3u8 = get_m3u8_method_download(reqCtx, adamID);
         } else {
             m3u8 = get_m3u8_method_play(leaseMgr, adamID);
+            if (m3u8 == NULL) {
+                fprintf(stderr, "[.] failed to get m3u8 of adamId: %ld, refreshing lease...\n", adamID);
+                uint8_t autom = 1;
+                _ZN22SVPlaybackLeaseManager12requestLeaseERKb(leaseMgr, &autom);
+                m3u8 = get_m3u8_method_play(leaseMgr, adamID);
+            }
         }
         if (m3u8 == NULL) {
-            fprintf(stderr, "[.] failed to get m3u8 of adamId: %ld\n", adamID);
+            fprintf(stderr, "[.] completely failed to get m3u8 of adamId: %ld\n", adamID);
             writefull(connfd, "\n", sizeof("\n"));
         } else {
             fprintf(stderr, "[.] m3u8 adamId: %ld, url: %s\n", adamID, m3u8);
@@ -748,8 +759,13 @@ static inline void *new_socket_m3u8(void *args) {
                 errno == ENETUNREACH)
                 continue;
             perror("accept4");
-            
+            continue;
         }
+
+        struct timeval tv;
+        tv.tv_sec = 10; // 10 seconds timeout
+        tv.tv_usec = 0;
+        setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
         handle_m3u8(connfd);
 
